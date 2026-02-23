@@ -1,17 +1,22 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESP32 Weather Dashboard Preview</title>
+    <title>ESP32 Weather Dashboard Pro Preview</title>
+    <!-- Phosphor Icons for web -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Montserrat:wght@400;700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Noto+Sans+KR:wght@400;700&display=swap"
+        rel="stylesheet">
     <style>
         :root {
-            --bg-color: #0A0E1A;
-            --header-color: #111827;
-            --btn-color: #1A2035;
+            --bg-dark: #0A0E1A;
+            --header-dark: #111827;
+            --btn-dark: #1A2035;
             --btn-pressed: #2A3A60;
             --btn-border: #2A3A55;
             --text-primary: #CDD8F0;
@@ -19,9 +24,11 @@
             --hot-bg: #B71C1C;
             --mild-bg: #0D47A1;
             --cold-bg: #1A237E;
-            --accent-red: #FF5252;
-            --screen-width: 480px;
-            --screen-height: 320px;
+            --forecast-bg: #0A1628;
+            --card-white-opa: rgba(255, 255, 255, 0.14);
+            --card-border-opa: rgba(255, 255, 255, 0.2);
+            --screen-w: 480px;
+            --screen-h: 320px;
         }
 
         * {
@@ -34,7 +41,7 @@
         body {
             background: #121212;
             color: white;
-            font-family: 'Inter', 'Noto Sans KR', sans-serif;
+            font-family: 'Montserrat', 'Noto Sans KR', sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -43,81 +50,62 @@
             overflow: hidden;
         }
 
-        /* Device Container */
         .device-frame {
             position: relative;
             padding: 20px;
-            background: #222;
-            border-radius: 20px;
-            box-shadow: 0 40px 100px rgba(0,0,0,0.8), inset 0 2px 5px rgba(255,255,255,0.1);
-            border: 1px solid #333;
+            background: #2a2a2a;
+            border-radius: 24px;
+            box-shadow: 0 50px 100px rgba(0, 0, 0, 0.9), inset 0 2px 5px rgba(255, 255, 255, 0.1);
+            border: 1px solid #3a3a3a;
         }
 
-        /* Screen Wrapper (Clipping) */
         .screen {
-            width: var(--screen-width);
-            height: var(--screen-height);
-            background: var(--bg-color);
+            width: var(--screen-w);
+            height: var(--screen-h);
+            background: var(--bg-dark);
             overflow: hidden;
             position: relative;
             border-radius: 4px;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-            cursor: default;
-            user-select: none;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
         }
 
-        /* TileView Emulator */
         .view-container {
             display: flex;
-            width: calc(var(--screen-width) * 2);
+            width: calc(var(--screen-w) * 3);
             height: 100%;
             transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
         }
 
-        .view-container.show-detail {
-            transform: translateX(-50%);
-        }
-
         .page {
-            width: var(--screen-width);
+            width: var(--screen-w);
             height: 100%;
             flex-shrink: 0;
             position: relative;
+            overflow: hidden;
         }
 
         /* --- Page 0: City List --- */
         .city-list-page {
-            background: var(--bg-color);
             display: flex;
             flex-direction: column;
         }
 
-        header {
-            width: 100%;
+        .hdr-list {
             height: 48px;
-            background: var(--header-color);
+            background: var(--header-dark);
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0 16px;
-            z-index: 10;
         }
 
-        header h1 {
-            font-family: 'Montserrat', sans-serif;
+        .hdr-list h1 {
             font-size: 14px;
-            font-weight: 700;
             color: var(--text-secondary);
             letter-spacing: 1px;
         }
 
-        header .status {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 14px;
-            color: var(--accent-red);
-        }
-
-        .grid-container {
+        .grid-cities {
             flex: 1;
             padding: 8px;
             overflow-y: auto;
@@ -127,20 +115,26 @@
             scrollbar-width: none;
         }
 
-        .grid-container::-webkit-scrollbar {
+        .grid-cities::-webkit-scrollbar {
             display: none;
         }
 
         .city-btn {
             height: 48px;
-            background: var(--btn-color);
+            background: var(--btn-dark);
             border: 1px solid var(--btn-border);
             border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: all 0.1s;
+            transition: 0.1s;
+        }
+
+        .city-btn span {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
         }
 
         .city-btn:active {
@@ -148,280 +142,429 @@
             transform: scale(0.96);
         }
 
-        .city-btn span {
-            font-family: 'Noto Sans KR', sans-serif;
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--text-primary);
-        }
-
-        /* --- Page 1: Detail Weather --- */
+        /* --- Page 1: Detail --- */
         .detail-page {
-            position: relative;
+            transition: background 0.5s;
             background: var(--mild-bg);
-            transition: background 0.5s ease;
         }
 
-        .detail-overlay {
+        .bg-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            position: absolute;
-            top: 0; left: 0;
-            transition: background 0.5s ease;
+            transition: background 0.5s;
         }
 
-        .back-btn {
-            position: absolute;
-            top: 8px;
-            left: 8px;
-            width: 84px;
-            height: 34px;
-            background: rgba(0, 0, 0, 0.4);
-            border-radius: 17px;
+        .hdr-nav {
+            height: 44px;
+            background: rgba(0, 0, 0, 0.27);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 6px;
+            position: relative;
+            z-index: 5;
+        }
+
+        .nav-btn {
+            width: 80px;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            border: none;
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
-            z-index: 20;
-            transition: background 0.2s;
         }
 
-        .back-btn:active {
-            background: rgba(0, 0, 0, 0.6);
-        }
-
-        .back-btn span {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 14px;
+        .hdr-detail-city {
+            font-size: 24px;
             font-weight: 700;
-            color: white;
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            pointer-events: none;
         }
 
-        .detail-content {
+        .main-weather {
+            height: 90px;
+            /* Fixed height matching ESP32 code (y:44 to 134) */
+            padding: 4px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             position: relative;
-            z-index: 10;
-            height: 100%;
+            z-index: 5;
+        }
+
+        .main-left {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .temp-txt {
+            font-size: 44px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .date-txt {
+            font-size: 11px;
+            color: #89B;
+            margin-top: 2px;
+        }
+
+        .cond-txt {
+            font-size: 16px;
+            color: #BBD4FF;
+            margin-top: 4px;
+            max-width: 130px;
+        }
+
+        .main-right i {
+            font-size: 64px;
+            opacity: 0.8;
+        }
+
+        .bento-grid {
+            padding: 0 6px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: 87px 89px;
+            /* Exact heights from .ino */
+            gap: 4px;
+            /* Reduced gap to fit */
+            position: relative;
+            z-index: 5;
+        }
+
+        .weather-card {
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            border-radius: 12px;
+            padding: 4px 6px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .weather-card i {
+            position: absolute;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 22px;
+            color: #90B4E0;
+        }
+
+        .card-label {
+            font-size: 11px;
+            color: #90B4E0;
+            margin-left: 30px;
+        }
+
+        .card-value {
+            font-size: 18px;
+            font-weight: 700;
+            margin-left: 28px;
+            margin-top: auto;
+            margin-bottom: 4px;
+        }
+
+        /* --- Page 2: Forecast --- */
+        .forecast-page {
+            background: var(--forecast-bg);
+        }
+
+        .forecast-grid {
+            padding: 6px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+        }
+
+        .fc-card {
+            height: 129px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 12px;
+            padding: 8px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding-top: 62px;
         }
 
-        .city-name {
-            font-family: 'Noto Sans KR', sans-serif;
-            font-size: 32px;
-            font-weight: 700;
-            color: white;
-            margin-bottom: 20px;
+        .fc-time {
+            font-size: 12px;
+            color: #7C8FA8;
         }
 
-        .temperature {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 64px;
-            font-weight: 700;
-            color: white;
-            margin-bottom: 10px;
-        }
-
-        .condition {
-            font-family: 'Noto Sans KR', sans-serif;
+        .fc-temp {
             font-size: 20px;
-            font-weight: 400;
-            color: #BBD4FF;
+            font-weight: 700;
+            margin: 10px 0;
         }
 
-        .info-bar {
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            height: 52px;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(4px);
+        .fc-cond {
+            font-size: 12px;
+            color: #AAB;
+            text-align: center;
+            line-height: 1.2;
         }
 
-        .info-bar span {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 14px;
-            color: #AABBDD;
-        }
-
-        /* Loading Spinner */
+        /* Loader */
         .loader {
-            width: 32px;
-            height: 32px;
-            border: 3px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: #fff;
-            animation: spin 1s ease-in-out infinite;
-            display: none;
             position: absolute;
             top: 50%;
             left: 50%;
-            margin-top: -16px;
-            margin-left: -16px;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: none;
+            z-index: 100;
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            0% {
+                transform: translate(-50%, -50%) rotate(0deg);
+            }
+
+            100% {
+                transform: translate(-50%, -50%) rotate(360deg);
+            }
         }
 
-        .footer-info {
-            margin-top: 30px;
+        .footer {
+            margin-top: 20px;
             font-size: 12px;
-            color: #666;
+            color: #555;
             text-align: center;
-            max-width: var(--screen-width);
-            line-height: 1.6;
+            line-height: 1.5;
         }
     </style>
 </head>
+
 <body>
 
     <div class="device-frame">
         <div class="screen">
+            <div id="loader" class="loader"></div>
             <div id="viewContainer" class="view-container">
+
                 <!-- Page 0: City List -->
                 <div class="page city-list-page">
-                    <header>
+                    <div class="hdr-list">
                         <h1>KOREA WEATHER</h1>
-                        <span id="statusLabel" class="status"></span>
-                    </header>
-                    <div id="cityGrid" class="grid-container">
-                        <!-- Buttons populated by JS -->
+                        <span id="wifiStatus" style="font-size:12px; color:#4CAF50;">● WiFi ON</span>
+                    </div>
+                    <div id="cityGrid" class="grid-cities"></div>
+                </div>
+
+                <!-- Page 1: Detail -->
+                <div id="detailPage" class="page detail-page">
+                    <div class="hdr-nav">
+                        <button class="nav-btn" onclick="goTo(0)"> &lt; LIST </button>
+                        <div id="detailCity" class="hdr-detail-city">서울</div>
+                        <button class="nav-btn" onclick="goTo(2)"> FCST &gt; </button>
+                    </div>
+                    <div class="main-weather">
+                        <div class="main-left">
+                            <div id="curTemp" class="temp-txt">--°</div>
+                            <div id="curDate" class="date-txt">--/-- --:--</div>
+                            <div id="curCond" class="cond-txt">...</div>
+                        </div>
+                        <div class="main-right">
+                            <i id="curIcon" class="ph-thin ph-cloud"></i>
+                        </div>
+                    </div>
+                    <div class="bento-grid">
+                        <div class="weather-card"><i class="ph-thin ph-drop"></i><span class="card-label">습도</span><span
+                                id="valHum" class="card-value">--%</span></div>
+                        <div class="weather-card"><i class="ph-thin ph-wind"></i><span class="card-label">풍속</span><span
+                                id="valWind" class="card-value">--m/s</span></div>
+                        <div class="weather-card"><i class="ph-thin ph-compass"></i><span
+                                class="card-label">풍향</span><span id="valDir" class="card-value">--</span></div>
+                        <div class="weather-card"><i class="ph-thin ph-cloud"></i><span
+                                class="card-label">운량</span><span id="valClouds" class="card-value">--%</span></div>
+                        <div class="weather-card"><i class="ph-thin ph-thermometer"></i><span
+                                class="card-label">체감온도</span><span id="valFeels" class="card-value">--°</span></div>
+                        <div class="weather-card"><i class="ph-thin ph-sun-horizon"></i><span
+                                class="card-label">최저/최고</span><span id="valMinMax" class="card-value">--/--°</span>
+                        </div>
+                        <div class="weather-card"><i class="ph-thin ph-gauge"></i><span
+                                class="card-label">기압</span><span id="valPres" class="card-value">--hPa</span></div>
+                        <div class="weather-card"><i class="ph-thin ph-eye"></i><span
+                                class="card-label">가시거리</span><span id="valVis" class="card-value">--km</span></div>
                     </div>
                 </div>
 
-                <!-- Page 1: Detail Weather -->
-                <div id="detailPage" class="page detail-page">
-                    <div id="detailOverlay" class="detail-overlay"></div>
-                    <div class="back-btn" onclick="goBack()">
-                        <span>< LIST</span>
+                <!-- Page 2: Forecast -->
+                <div class="page forecast-page">
+                    <div class="hdr-nav">
+                        <button class="nav-btn" onclick="goTo(1)"> &lt; DETAIL </button>
+                        <div class="hdr-detail-city" style="font-size:14px; color:var(--text-secondary);">3-HOUR
+                            FORECAST</div>
+                        <div style="width:80px;"></div>
                     </div>
-                    <div class="detail-content">
-                        <div id="cityName" class="city-name">서울</div>
-                        <div id="tempVal" class="temperature">--°</div>
-                        <div id="conditionVal" class="condition">Loading...</div>
+                    <div id="forecastGrid" class="forecast-grid">
+                        <!-- 8 cards -->
                     </div>
-                    <div class="info-bar">
-                        <span id="detailsVal">Humidity: --% | Wind: --m/s</span>
-                    </div>
-                    <div id="loader" class="loader"></div>
                 </div>
+
             </div>
         </div>
     </div>
 
-    <div class="footer-info">
-        ESP32_STOCK Preview Emulator (480x320)<br>
-        OpenWeatherMap API 기반 리얼데이터 시뮬레이션
+    <div class="footer">
+        ESP32_STOCK Pro Emulator (480x320)<br>
+        Bento Layout & 3-Page Navigation
     </div>
 
     <script>
-        const API_KEY = '1aef8f525b5be0bc4ab1ba0c3d558701';
-        
+        // GitHub 배포 시 API 키 보안을 위해 하드코딩된 키를 초기값으로 두고, 
+        // 로컬 실행 시에는 별도의 config.js 등을 사용하거나 환경변수를 활용하세요.
+        const API_KEY = 'YOUR_OPENWEATHERMAP_KEY'; // 여기에 본인의 API 키를 입력하세요.
         const cities = [
-            {name: "고양", lat: 37.6584, lon: 126.8320},
-            {name: "광주", lat: 35.1595, lon: 126.8526},
-            {name: "구미", lat: 36.1194, lon: 128.3441},
-            {name: "군포", lat: 37.3611, lon: 126.9353},
-            {name: "김해", lat: 35.2335, lon: 128.8810},
-            {name: "김포", lat: 37.6152, lon: 126.7156},
-            {name: "남양주", lat: 37.6360, lon: 127.2165},
-            {name: "대구", lat: 35.8714, lon: 128.6014},
-            {name: "대전", lat: 36.3504, lon: 127.3845},
-            {name: "부천", lat: 37.4841, lon: 126.7828},
-            {name: "부산", lat: 35.1796, lon: 129.0756},
-            {name: "성남", lat: 37.4200, lon: 127.1267},
-            {name: "서울", lat: 37.5665, lon: 126.9780},
-            {name: "수원", lat: 37.2636, lon: 127.0286},
-            {name: "시흥", lat: 37.3801, lon: 126.8029},
-            {name: "안산", lat: 37.3219, lon: 126.8308},
-            {name: "안양", lat: 37.3943, lon: 126.9568},
-            {name: "양산", lat: 35.3385, lon: 129.0264},
-            {name: "용인", lat: 37.2411, lon: 127.1776},
-            {name: "울산", lat: 35.5384, lon: 129.3114},
-            {name: "의정부", lat: 37.7381, lon: 127.0337},
-            {name: "인천", lat: 37.4563, lon: 126.7052},
-            {name: "전주", lat: 35.8242, lon: 127.1480},
-            {name: "제주", lat: 33.4996, lon: 126.5312},
-            {name: "창원", lat: 35.2280, lon: 128.6811},
-            {name: "천안", lat: 36.8151, lon: 127.1139},
-            {name: "청주", lat: 36.6358, lon: 127.4912},
-            {name: "파주", lat: 37.7600, lon: 126.7798},
-            {name: "평택", lat: 36.9921, lon: 127.1129},
-            {name: "포항", lat: 36.0190, lon: 129.3435},
-            {name: "화성", lat: 37.1995, lon: 126.8312}
+            { "name": "고양", "lat": 37.6584, "lon": 126.8320 }, { "name": "광주", "lat": 35.1595, "lon": 126.8526 },
+            { "name": "구미", "lat": 36.1194, "lon": 128.3441 }, { "name": "군포", "lat": 37.3611, "lon": 126.9353 },
+            { "name": "김해", "lat": 35.2335, "lon": 128.8810 }, { "name": "김포", "lat": 37.6152, "lon": 126.7156 },
+            { "name": "남양주", "lat": 37.6360, "lon": 127.2165 }, { "name": "대구", "lat": 35.8714, "lon": 128.6014 },
+            { "name": "대전", "lat": 36.3504, "lon": 127.3845 }, { "name": "부천", "lat": 37.4841, "lon": 126.7828 },
+            { "name": "부산", "lat": 35.1796, "lon": 129.0756 }, { "name": "성남", "lat": 37.4200, "lon": 127.1267 },
+            { "name": "서울", "lat": 37.5665, "lon": 126.9780 }, { "name": "수원", "lat": 37.2636, "lon": 127.0286 },
+            { "name": "시흥", "lat": 37.3801, "lon": 126.8029 }, { "name": "안산", "lat": 37.3219, "lon": 126.8308 },
+            { "name": "안양", "lat": 37.3943, "lon": 126.9568 }, { "name": "양산", "lat": 35.3385, "lon": 129.0264 },
+            { "name": "용인", "lat": 37.2411, "lon": 127.1776 }, { "name": "울산", "lat": 35.5384, "lon": 129.3114 },
+            { "name": "의정부", "lat": 37.7381, "lon": 127.0337 }, { "name": "인천", "lat": 37.4563, "lon": 126.7052 },
+            { "name": "전주", "lat": 35.8242, "lon": 127.1480 }, { "name": "제주", "lat": 33.4996, "lon": 126.5312 },
+            { "name": "창원", "lat": 35.2280, "lon": 128.6811 }, { "name": "천안", "lat": 36.8151, "lon": 127.1139 },
+            { "name": "청주", "lat": 36.6358, "lon": 127.4912 }, { "name": "파주", "lat": 37.7600, "lon": 126.7798 },
+            { "name": "평택", "lat": 36.9921, "lon": 127.1129 }, { "name": "포항", "lat": 36.0190, "lon": 129.3435 },
+            { "name": "화성", "lat": 37.1995, "lon": 126.8312 }
         ];
 
-        const grid = document.getElementById('cityGrid');
         const viewContainer = document.getElementById('viewContainer');
-        const detailOverlay = document.getElementById('detailOverlay');
         const loader = document.getElementById('loader');
 
-        // Populate Grid
-        cities.forEach((city, index) => {
-            const btn = document.createElement('div');
-            btn.className = 'city-btn';
-            btn.innerHTML = `<span>${city.name}</span>`;
-            btn.addEventListener('click', () => selectCity(index));
-            grid.appendChild(btn);
+        // Init Grid
+        const cityGrid = document.getElementById('cityGrid');
+        cities.forEach((c, i) => {
+            const b = document.createElement('div');
+            b.className = 'city-btn';
+            b.innerHTML = `<span>${c.name}</span>`;
+            b.onclick = () => selectCity(i);
+            cityGrid.appendChild(b);
         });
 
-        function selectCity(idx) {
-            const city = cities[idx];
-            document.getElementById('cityName').textContent = city.name;
-            document.getElementById('tempVal').textContent = '--°';
-            document.getElementById('conditionVal').textContent = 'Fetching...';
-            document.getElementById('detailsVal').textContent = '';
-            
-            viewContainer.classList.add('show-detail');
-            fetchWeather(city);
+        // Forecast Grid
+        const fcGrid = document.getElementById('forecastGrid');
+        for (let i = 0; i < 8; i++) {
+            const fc = document.createElement('div');
+            fc.className = 'fc-card';
+            fc.innerHTML = `<div class="fc-time">--:--</div><div class="fc-temp">--°</div><div class="fc-cond">...</div>`;
+            fcGrid.appendChild(fc);
         }
 
-        function goBack() {
-            viewContainer.classList.remove('show-detail');
+        function goTo(p) {
+            viewContainer.style.transform = `translateX(-${p * 480}px)`;
+        }
+
+        async function selectCity(idx) {
+            const city = cities[idx];
+            document.getElementById('detailCity').textContent = city.name;
+            goTo(1);
+            fetchWeather(city);
         }
 
         async function fetchWeather(city) {
             loader.style.display = 'block';
-            const url = `https://api.openweathermap.org/data/2.5/weather?lat=${city.lat}&lon=${city.lon}&appid=${API_KEY}&units=metric&lang=kr`;
-            
             try {
-                const response = await fetch(url);
-                const data = await response.json();
-                
-                if (data.cod !== 200) throw new Error(data.message);
-                
-                updateUI(data);
-            } catch (err) {
-                console.error(err);
-                document.getElementById('conditionVal').textContent = 'Error: ' + err.message;
-                detailOverlay.style.background = '#333';
+                // Current
+                const resC = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${city.lat}&lon=${city.lon}&appid=${API_KEY}&units=metric&lang=kr`);
+                const dataC = await resC.json();
+                updateDetailUI(dataC);
+
+                // Forecast
+                const resF = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${city.lat}&lon=${city.lon}&appid=${API_KEY}&units=metric&cnt=8&lang=kr`);
+                const dataF = await resF.json();
+                updateForecastUI(dataF);
+            } catch (e) {
+                console.error(e);
             } finally {
                 loader.style.display = 'none';
             }
         }
 
-        function updateUI(data) {
+        const iconMap = {
+            "01d": "ph-sun", "01n": "ph-moon", "02d": "ph-cloud-sun", "02n": "ph-cloud-moon",
+            "03d": "ph-cloud", "03n": "ph-cloud", "04d": "ph-cloud", "04n": "ph-cloud",
+            "09d": "ph-cloud-rain", "10d": "ph-cloud-rain", "11d": "ph-cloud-lightning",
+            "13d": "ph-cloud-snow", "50d": "ph-cloud-fog"
+        };
+
+        function getIcon(code) {
+            const base = code.substring(0, 2) + (code.endsWith('n') ? 'n' : 'd');
+            return iconMap[base] || "ph-cloud";
+        }
+
+        function updateDetailUI(data) {
             const temp = data.main.temp;
-            const humidity = data.main.humidity;
-            const wind = data.wind.speed;
-            const desc = data.weather[0].description;
-            
-            document.getElementById('tempVal').textContent = temp.toFixed(1) + '°';
-            document.getElementById('conditionVal').textContent = desc;
-            document.getElementById('detailsVal').textContent = `Humidity: ${humidity}%  |  Wind: ${wind.toFixed(1)}m/s`;
-            
-            // Color Logic (Matches ESP32 Code)
-            let color = '#1A237E'; // Cold
-            if (temp > 25) color = '#B71C1C'; // Hot
-            else if (temp > 10) color = '#0D47A1'; // Mild
-            
-            detailOverlay.style.background = color;
+            document.getElementById('curTemp').textContent = temp.toFixed(1) + '°';
+            document.getElementById('curCond').textContent = data.weather[0].description;
+
+            const date = new Date((data.dt + data.timezone) * 1000); // 
+            // openweather timezone is in seconds. JS New Date is UTC.
+            // Simplified for preview:
+            const now = new Date();
+            document.getElementById('curDate').textContent = `${now.getMonth() + 1}/${now.getDate()} ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+            document.getElementById('curIcon').className = `ph-thin ${getIcon(data.weather[0].icon)}`;
+
+            document.getElementById('valHum').textContent = data.main.humidity + '%';
+            document.getElementById('valWind').textContent = data.wind.speed + 'm/s';
+
+            const deg = data.wind.deg || 0;
+            const dirs = ["북", "북동", "동", "남동", "남", "남서", "서", "북서"];
+            document.getElementById('valDir').textContent = dirs[Math.round(deg / 45) % 8];
+
+            document.getElementById('valClouds').textContent = (data.clouds?.all || 0) + '%';
+            document.getElementById('valFeels').textContent = data.main.feels_like.toFixed(1) + '°';
+            document.getElementById('valMinMax').textContent = `${data.main.temp_min.toFixed(0)}/${data.main.temp_max.toFixed(0)}°`;
+            document.getElementById('valPres').textContent = data.main.pressure + 'hPa';
+            document.getElementById('valVis').textContent = (data.visibility / 1000).toFixed(0) + 'km';
+
+            // BG Color
+            let bg = "var(--cold-bg)";
+            if (temp > 25) bg = "var(--hot-bg)";
+            else if (temp > 10) bg = "var(--mild-bg)";
+            document.getElementById('detailPage').style.background = bg;
+        }
+
+        function updateForecastUI(data) {
+            const cards = fcGrid.querySelectorAll('.fc-card');
+            data.list.forEach((item, i) => {
+                if (i >= 8) return;
+                const timeStr = item.dt_txt.substring(11, 16);
+                cards[i].innerHTML = `
+                    <div class="fc-time">${timeStr}</div>
+                    <div class="fc-temp">${item.main.temp.toFixed(0)}°</div>
+                    <div class="fc-cond">${item.weather[0].description}</div>
+                `;
+            });
         }
     </script>
 </body>
+
 </html>
