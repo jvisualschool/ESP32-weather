@@ -10,6 +10,7 @@
 #include "config.h"
 #include "weather_cities.h"
 #include "font_kr.h"
+#include "icon_font.h"
 
 // -------------------------------------------------------------------
 // 전역 변수
@@ -39,10 +40,29 @@ lv_obj_t *label_feels_val;
 lv_obj_t *label_minmax_val;
 lv_obj_t *label_pressure_val;
 lv_obj_t *label_vis_val;
+lv_obj_t *label_weather_icon;
 
 lv_obj_t *fc_time[8];
 lv_obj_t *fc_cond[8];
 lv_obj_t *fc_temp[8];
+
+// -------------------------------------------------------------------
+// OWM 아이콘 코드 → Phosphor 아이콘 유니코드
+// -------------------------------------------------------------------
+static const char* get_weather_icon(const char* code) {
+    if (!code || !code[0]) return ICON_CLOUD;
+    if (strncmp(code, "01d", 3) == 0) return ICON_SUN;
+    if (strncmp(code, "01n", 3) == 0) return ICON_MOON;
+    if (strncmp(code, "02",  2) == 0) return ICON_CLOUD_SUN;
+    if (strncmp(code, "03",  2) == 0) return ICON_CLOUD;
+    if (strncmp(code, "04",  2) == 0) return ICON_CLOUD;
+    if (strncmp(code, "09",  2) == 0) return ICON_CLOUD_RAIN;
+    if (strncmp(code, "10",  2) == 0) return ICON_CLOUD_RAIN;
+    if (strncmp(code, "11",  2) == 0) return ICON_CLOUD_LIGHTNING;
+    if (strncmp(code, "13",  2) == 0) return ICON_CLOUD_SNOW;
+    if (strncmp(code, "50",  2) == 0) return ICON_CLOUD_FOG;
+    return ICON_CLOUD;
+}
 
 // -------------------------------------------------------------------
 // 날씨 설명 번역
@@ -133,8 +153,9 @@ void update_weather_ui(String json) {
     int   wind_deg   = doc["wind"]["deg"] | 0;
     int   clouds     = doc["clouds"]["all"] | 0;
     int   visibility = doc["visibility"] | 10000;
-    const char* desc = doc["weather"][0]["description"];
-    long  dt         = doc["dt"];
+    const char* desc      = doc["weather"][0]["description"];
+    const char* icon_code = doc["weather"][0]["icon"];
+    long  dt              = doc["dt"];
 
     // KST 날짜/시간 (UTC+9)
     time_t kst = (time_t)dt + 9 * 3600;
@@ -161,6 +182,8 @@ void update_weather_ui(String json) {
     snprintf(buf, sizeof(buf), "%.0f/%.0f°",   temp_min, temp_max); lv_label_set_text(label_minmax_val, buf);
     snprintf(buf, sizeof(buf), "%dhPa",        pressure);   lv_label_set_text(label_pressure_val, buf);
     snprintf(buf, sizeof(buf), "%.0fkm",       visibility / 1000.0f); lv_label_set_text(label_vis_val, buf);
+
+    lv_label_set_text(label_weather_icon, get_weather_icon(icon_code));
 
     if (temp > 25)      lv_obj_set_style_bg_color(bg_overlay, lv_color_hex(0xB71C1C), 0);
     else if (temp > 10) lv_obj_set_style_bg_color(bg_overlay, lv_color_hex(0x0D47A1), 0);
@@ -316,9 +339,9 @@ static void make_fc_card(lv_obj_t *parent, int x, int y,
     lv_obj_align(*cond_out, LV_ALIGN_BOTTOM_MID, 0, 0);
 }
 
-// 벤토 카드 생성 헬퍼
+// 벤토 카드 생성 헬퍼 (아이콘 좌측, 제목+값 우측)
 static void make_card(lv_obj_t *parent, int x, int y, int w, int h,
-                      const char *title, lv_obj_t **val_out) {
+                      const char *icon, const char *title, lv_obj_t **val_out) {
     lv_obj_t *card = lv_obj_create(parent);
     lv_obj_set_pos(card, x, y);
     lv_obj_set_size(card, w, h);
@@ -328,20 +351,29 @@ static void make_card(lv_obj_t *parent, int x, int y, int w, int h,
     lv_obj_set_style_border_color(card, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_style_border_opa(card, 55, 0);
     lv_obj_set_style_radius(card, 12, 0);
-    lv_obj_set_style_pad_all(card, 8, 0);
+    lv_obj_set_style_pad_all(card, 6, 0);
     lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
 
+    // 아이콘 (좌측 중앙)
+    lv_obj_t *ico = lv_label_create(card);
+    lv_label_set_text(ico, icon);
+    lv_obj_set_style_text_font(ico, &font_icon_sm, 0);
+    lv_obj_set_style_text_color(ico, lv_color_hex(0x90B4E0), 0);
+    lv_obj_align(ico, LV_ALIGN_LEFT_MID, 4, 0);
+
+    // 제목 (우측 상단)
     lv_obj_t *lt = lv_label_create(card);
     lv_label_set_text(lt, title);
     lv_obj_set_style_text_font(lt, &font_kr_14, 0);
     lv_obj_set_style_text_color(lt, lv_color_hex(0x90B4E0), 0);
-    lv_obj_align(lt, LV_ALIGN_TOP_LEFT, 0, 0);
+    lv_obj_align(lt, LV_ALIGN_TOP_LEFT, 32, 4);
 
+    // 값 (우측 하단)
     lv_obj_t *lv = lv_label_create(card);
     lv_label_set_text(lv, "--");
     lv_obj_set_style_text_font(lv, &font_kr_20, 0);
     lv_obj_set_style_text_color(lv, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_align(lv, LV_ALIGN_BOTTOM_LEFT, 0, 0);
+    lv_obj_align(lv, LV_ALIGN_BOTTOM_LEFT, 30, -4);
     *val_out = lv;
 }
 
@@ -453,25 +485,33 @@ void setup_ui() {
     lv_obj_set_style_text_color(label_datetime, lv_color_hex(0x8899BB), 0);
     lv_obj_set_pos(label_datetime, 18, 104);
 
-    // 날씨 설명 (우측)
+    // 날씨 설명 (우측 상단)
     label_condition = lv_label_create(detail_page);
     lv_obj_set_style_text_font(label_condition, &font_kr_20, 0);
     lv_obj_set_style_text_color(label_condition, lv_color_hex(0xBBD4FF), 0);
-    lv_obj_set_style_max_width(label_condition, 210, 0);
+    lv_obj_set_style_max_width(label_condition, 130, 0);
     lv_label_set_long_mode(label_condition, LV_LABEL_LONG_WRAP);
-    lv_obj_set_pos(label_condition, 248, 62);
+    lv_obj_set_pos(label_condition, 248, 60);
+
+    // 날씨 큰 아이콘 (우측, 메인 영역)
+    label_weather_icon = lv_label_create(detail_page);
+    lv_label_set_text(label_weather_icon, ICON_CLOUD);
+    lv_obj_set_style_text_font(label_weather_icon, &font_icon_lg, 0);
+    lv_obj_set_style_text_color(label_weather_icon, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_opa(label_weather_icon, 210, 0);
+    lv_obj_set_pos(label_weather_icon, 400, 52);
 
     // 벤토 행 1 (y=134, h=87)
-    make_card(detail_page,   6, 134, 112, 87, "습도",  &label_humidity_val);
-    make_card(detail_page, 124, 134, 112, 87, "풍속",  &label_wind_val);
-    make_card(detail_page, 242, 134, 112, 87, "풍향",  &label_wind_dir_val);
-    make_card(detail_page, 360, 134, 112, 87, "운량",  &label_clouds_val);
+    make_card(detail_page,   6, 134, 112, 87, ICON_DROP,        "습도",     &label_humidity_val);
+    make_card(detail_page, 124, 134, 112, 87, ICON_WIND,        "풍속",     &label_wind_val);
+    make_card(detail_page, 242, 134, 112, 87, ICON_COMPASS,     "풍향",     &label_wind_dir_val);
+    make_card(detail_page, 360, 134, 112, 87, ICON_CLOUD,       "운량",     &label_clouds_val);
 
     // 벤토 행 2 (y=225, h=89) — 하단 y+h=314, 화면 6px 여백
-    make_card(detail_page,   6, 225, 112, 89, "체감온도",  &label_feels_val);
-    make_card(detail_page, 124, 225, 112, 89, "최저/최고", &label_minmax_val);
-    make_card(detail_page, 242, 225, 112, 89, "기압",      &label_pressure_val);
-    make_card(detail_page, 360, 225, 112, 89, "가시거리",  &label_vis_val);
+    make_card(detail_page,   6, 225, 112, 89, ICON_THERMOMETER, "체감온도", &label_feels_val);
+    make_card(detail_page, 124, 225, 112, 89, ICON_SUN_HORIZON, "최저/최고",&label_minmax_val);
+    make_card(detail_page, 242, 225, 112, 89, ICON_GAUGE,       "기압",     &label_pressure_val);
+    make_card(detail_page, 360, 225, 112, 89, ICON_EYE,         "가시거리", &label_vis_val);
 
     lv_label_set_text(label_city_name, k_cities[0].name);
     lv_label_set_text(label_temp,      "--");
