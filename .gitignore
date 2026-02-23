@@ -3,3 +3,6 @@ config.h
 
 # macOS
 .DS_Store
+
+# Added by ggshield
+.cache_ggshield
