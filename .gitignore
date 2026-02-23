@@ -1,0 +1,5 @@
+# 실제 자격증명 파일 (config.example.h를 복사해 사용)
+config.h
+
+# macOS
+.DS_Store
